@@ -2,6 +2,8 @@
 
 `AI Global Sync` is a local-first CLI that keeps one source rules (and optional Skills directory) in sync across the configuration paths used by AI tools like Claude Code, Cursor, Codex, and Windsurf.
 
+**Keywords:** claude code · cursor · codex · windsurf · rules sync · skills sync
+
 > TL;DR: 一条命令解决「多 AI 编程工具规则/Skills 反复手动复制」的痛点。安装后运行：`npm install && npm run build && node dist/src/index.js --dry-run` 先预览，再 `node dist/src/index.js` 真写入。
 
 ## Why it exists
