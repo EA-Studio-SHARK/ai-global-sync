@@ -1,46 +1,43 @@
 # AI Global Sync
 
-A local-first synchronizer for AI tool rules and Skills.
+`AI Global Sync` is a local-first CLI that keeps one source rules file in sync across the configuration paths used by AI tools like Claude Code, Cursor, Codex, and Windsurf.
 
-## What it solves
+## Why it exists
 
-If you use Claude Code, Cursor, Codex, Windsurf, or similar tools, you often end up copying the same rules and Skills into multiple places. `AI Global Sync` gives you one source file and syncs it to each target.
+AI workflows often drift because each tool stores instructions in a different place. This CLI gives you one canonical rules file and copies it to the places your tools actually read.
+
+## Features
+
+- Sync one source file to multiple destinations
+- Create missing parent directories automatically
+- Skip files that are already up to date
+- Print a JSON summary in CLI mode
 
 ## Quick start
 
 ```bash
 npm install
 npm run build
-node dist/index.js global.md
+node dist/src/index.js global.md
 ```
 
-## Example
+By default, the CLI syncs `global.md` into the tool paths listed in `src/index.ts`.
 
-1. Write your global rules in `global.md`
-2. Run the CLI
-3. The file is copied into each configured tool path
+## Example workflow
 
-## Features
+1. Edit `global.md` once.
+2. Run the sync command.
+3. Open each target tool and confirm the updated rules were copied over.
 
-- One source of truth for AI rules
-- Local-only file sync
-- Works with Markdown-based rules and Skills
-- Easy to extend for new tools
-
-## How it works
-
-The CLI reads one source file and copies it into target config paths. The current MVP includes a simple adapter list for common AI tools.
-
-## Configuration
-
-Edit the target list in `src/index.ts`.
-
-## Tests
+## Development
 
 ```bash
+npm run lint
 npm test
 ```
 
-## License
+## Notes
 
-MIT
+- The project is designed for local use only.
+- No cloud account or telemetry is required.
+- You can customize target paths in `src/index.ts`.
