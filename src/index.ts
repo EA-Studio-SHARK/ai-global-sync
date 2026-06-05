@@ -67,25 +67,30 @@ export function syncContent(sourceFile: string, targets: string[], options: Sync
 
   for (const target of targets) {
     const resolved = expandHome(target);
-    ensureDir(resolved);
-    const before = existsSync(resolved) ? readFileSync(resolved, 'utf8') : '';
+    try {
+      ensureDir(resolved);
+      const before = existsSync(resolved) ? readFileSync(resolved, 'utf8') : '';
 
-    if (dryRun) {
-      results.push({ target: resolved, status: 'dry-run', kind: 'rules', reason: before ? 'would update' : 'would create' });
-      continue;
+      if (dryRun) {
+        results.push({ target: resolved, status: 'dry-run', kind: 'rules', reason: before ? 'would update' : 'would create' });
+        continue;
+      }
+
+      if (before === source) {
+        results.push({ target: resolved, status: 'skipped', kind: 'rules', reason: 'already up to date' });
+        continue;
+      }
+
+      if (backup && before) {
+        backupFile(resolved, before);
+      }
+
+      writeFileSync(resolved, source, 'utf8');
+      results.push({ target: resolved, status: before ? 'synced' : 'created', kind: 'rules' });
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : 'unknown error';
+      results.push({ target: resolved, status: 'skipped', kind: 'rules', reason });
     }
-
-    if (before === source) {
-      results.push({ target: resolved, status: 'skipped', kind: 'rules', reason: 'already up to date' });
-      continue;
-    }
-
-    if (backup && before) {
-      backupFile(resolved, before);
-    }
-
-    writeFileSync(resolved, source, 'utf8');
-    results.push({ target: resolved, status: before ? 'synced' : 'created', kind: 'rules' });
   }
 
   return results;
@@ -109,12 +114,17 @@ export function syncSkills(sourceDir: string, targets: string[], options: SyncOp
       continue;
     }
 
-    if (backup && existsSync(resolvedTarget)) {
-      backupDir(resolvedTarget);
-    }
+    try {
+      if (backup && existsSync(resolvedTarget)) {
+        backupDir(resolvedTarget);
+      }
 
-    cpSync(resolvedSource, resolvedTarget, { recursive: true, force: true });
-    results.push({ target: resolvedTarget, status: 'synced', kind: 'skills' });
+      cpSync(resolvedSource, resolvedTarget, { recursive: true, force: true });
+      results.push({ target: resolvedTarget, status: 'synced', kind: 'skills' });
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : 'unknown error';
+      results.push({ target: resolvedTarget, status: 'skipped', kind: 'skills', reason });
+    }
   }
 
   return results;

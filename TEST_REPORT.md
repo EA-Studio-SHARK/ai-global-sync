@@ -23,7 +23,7 @@
 
 ## Passed
 - Build completed successfully
-- Automated tests passed: 6/6（含 dry-run/备份/Skills 同步/配置文件 CLI 覆盖）— local repo
+- Automated tests passed: 6/6（含 dry-run/备份/Skills 同步/配置文件 CLI 覆盖）— local repo；最新一轮 `npm test`：tests 6 / pass 6 / fail 0 / exit code 0。
 - Fresh clone tests: build & tests passed (remote HEAD), README dry-run/写入命令产出 JSON、生成规则与 Skills 目标文件并写入 .bak
 - Clean-environment install completed successfully with `npm install --ignore-scripts --no-audit --no-fund`
 
