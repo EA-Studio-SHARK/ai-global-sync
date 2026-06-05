@@ -68,13 +68,15 @@ export function syncContent(sourceFile: string, targets: string[], options: Sync
   for (const target of targets) {
     const resolved = expandHome(target);
     try {
-      ensureDir(resolved);
-      const before = existsSync(resolved) ? readFileSync(resolved, 'utf8') : '';
+      const exists = existsSync(resolved);
+      const before = exists ? readFileSync(resolved, 'utf8') : '';
 
       if (dryRun) {
         results.push({ target: resolved, status: 'dry-run', kind: 'rules', reason: before ? 'would update' : 'would create' });
         continue;
       }
+
+      ensureDir(resolved);
 
       if (before === source) {
         results.push({ target: resolved, status: 'skipped', kind: 'rules', reason: 'already up to date' });
@@ -107,7 +109,7 @@ export function syncSkills(sourceDir: string, targets: string[], options: SyncOp
 
   for (const target of targets) {
     const resolvedTarget = expandHome(target);
-    mkdirSync(resolvedTarget, { recursive: true });
+    const targetExists = existsSync(resolvedTarget);
 
     if (dryRun) {
       results.push({ target: resolvedTarget, status: 'dry-run', kind: 'skills', reason: 'would sync directory' });
@@ -115,7 +117,9 @@ export function syncSkills(sourceDir: string, targets: string[], options: SyncOp
     }
 
     try {
-      if (backup && existsSync(resolvedTarget)) {
+      mkdirSync(resolvedTarget, { recursive: true });
+
+      if (backup && targetExists) {
         backupDir(resolvedTarget);
       }
 

@@ -110,3 +110,29 @@ test('runCli respects config file and dry-run', () => {
   assert.equal(readFileSync(destRule, 'utf8'), 'cfg');
   assert.equal(readFileSync(path.join(destSkill, 'k.md'), 'utf8'), 'k');
 });
+
+test('dry-run does not create target directories or backups', () => {
+  const tmp = mkdtempSync(path.join(os.tmpdir(), 'ai-global-sync-dryrun-'));
+  const configPath = path.join(tmp, 'aigs.config.json');
+  const source = path.join(tmp, 'global.md');
+  writeFileSync(source, 'preview', 'utf8');
+  const skillSource = path.join(tmp, 'skills');
+  mkdirSync(skillSource, { recursive: true });
+  writeFileSync(path.join(skillSource, 'skill.md'), 'skill', 'utf8');
+
+  const destRule = path.join(tmp, 'out', 'rule.md');
+  const destSkill = path.join(tmp, 'out', 'skills');
+  const cfg = {
+    sourceRules: source,
+    sourceSkills: skillSource,
+    tools: [{ name: 't', configPath: destRule, skillPath: destSkill }]
+  };
+  writeFileSync(configPath, JSON.stringify(cfg), 'utf8');
+
+  runCli(['--config', configPath, '--dry-run']);
+
+  assert.equal(existsSync(destRule), false, 'dry-run should not create rule file');
+  assert.equal(existsSync(`${destRule}.bak`), false, 'dry-run should not create rule backup');
+  assert.equal(existsSync(destSkill), false, 'dry-run should not create skill dir');
+  assert.equal(existsSync(`${destSkill}.bak`), false, 'dry-run should not create skill backup');
+});
