@@ -23,8 +23,8 @@
 
 ## Passed
 - Build completed successfully
-- Automated tests passed: 6/6（含 dry-run/备份/Skills 同步/配置文件 CLI 覆盖）— local repo；最新一轮 `npm test`：tests 6 / pass 6 / fail 0 / exit code 0。
-- Fresh clone tests: build & tests passed (remote HEAD commit 5becd1494e519afbad361e7ba854fbeca96713f5)，README dry-run/写入命令产出 JSON、生成规则与 Skills 目标文件并写入 .bak；最新一轮 fresh clone `npm test`: tests 6 / pass 6 / fail 0 / exit code 0。
+- Automated tests passed: 7/7（含 dry-run/备份/Skills 同步/配置文件 CLI、dry-run 无副作用覆盖）— local repo；最新一轮 `npm test`：tests 7 / pass 7 / fail 0 / exit code 0。
+- Fresh clone tests: build & tests passed (commit 45f6641ebde890f16043a1b9f5d88c1804591221)，README dry-run/写入命令产出 JSON、生成规则与 Skills 目标文件并写入 .bak；最新一轮 fresh clone `npm test`: tests 7 / pass 7 / fail 0 / exit code 0。
 - Clean-environment install completed successfully with `npm install --ignore-scripts --no-audit --no-fund`
 
 ## README command verification
