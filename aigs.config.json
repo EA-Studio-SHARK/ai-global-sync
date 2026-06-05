@@ -1,0 +1,10 @@
+{
+  "sourceRules": "global.md",
+  "sourceSkills": "skills",
+  "tools": [
+    { "name": "claude-code", "configPath": "~/.claude/CLAUDE.md", "skillPath": "~/.claude/skills" },
+    { "name": "cursor", "configPath": "~/.cursor/rules/global.md", "skillPath": "~/.cursor/skills" },
+    { "name": "codex", "configPath": "~/.codex/AGENTS.md", "skillPath": "~/.codex/skills" },
+    { "name": "windsurf", "configPath": "~/.windsurf/rules.md", "skillPath": "~/.windsurf/skills" }
+  ]
+}

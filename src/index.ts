@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, cpSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -9,12 +9,24 @@ export type ToolConfig = {
   skillPath?: string;
 };
 
-export type SyncStatus = 'synced' | 'created' | 'skipped';
+export type SyncStatus = 'synced' | 'created' | 'skipped' | 'dry-run';
 
 export type SyncResult = {
   target: string;
   status: SyncStatus;
   reason?: string;
+  kind?: 'rules' | 'skills';
+};
+
+type SyncOptions = {
+  dryRun?: boolean;
+  backup?: boolean;
+};
+
+export type AigsConfig = {
+  sourceRules?: string;
+  sourceSkills?: string;
+  tools?: ToolConfig[];
 };
 
 export const tools: ToolConfig[] = [
@@ -24,6 +36,12 @@ export const tools: ToolConfig[] = [
   { name: 'windsurf', configPath: '~/.windsurf/rules.md', skillPath: '~/.windsurf/skills' }
 ];
 
+function resolvePath(p?: string): string | undefined {
+  if (!p) return undefined;
+  const resolved = p.startsWith('~/') ? path.join(process.env.HOME ?? '', p.slice(2)) : p;
+  return path.isAbsolute(resolved) ? resolved : path.resolve(resolved);
+}
+
 export function expandHome(input: string): string {
   return input.startsWith('~/') ? path.join(process.env.HOME ?? '', input.slice(2)) : input;
 }
@@ -32,7 +50,18 @@ export function ensureDir(filePath: string) {
   mkdirSync(path.dirname(filePath), { recursive: true });
 }
 
-export function syncContent(sourceFile: string, targets: string[]): SyncResult[] {
+function backupFile(target: string, content: string) {
+  const backupPath = `${target}.bak`;
+  writeFileSync(backupPath, content, 'utf8');
+}
+
+function backupDir(targetDir: string) {
+  const backupPath = `${targetDir}.bak`;
+  cpSync(targetDir, backupPath, { recursive: true, force: true });
+}
+
+export function syncContent(sourceFile: string, targets: string[], options: SyncOptions = {}): SyncResult[] {
+  const { dryRun = false, backup = true } = options;
   const source = readFileSync(sourceFile, 'utf8');
   const results: SyncResult[] = [];
 
@@ -41,23 +70,116 @@ export function syncContent(sourceFile: string, targets: string[]): SyncResult[]
     ensureDir(resolved);
     const before = existsSync(resolved) ? readFileSync(resolved, 'utf8') : '';
 
-    if (before === source) {
-      results.push({ target: resolved, status: 'skipped', reason: 'already up to date' });
+    if (dryRun) {
+      results.push({ target: resolved, status: 'dry-run', kind: 'rules', reason: before ? 'would update' : 'would create' });
       continue;
     }
 
+    if (before === source) {
+      results.push({ target: resolved, status: 'skipped', kind: 'rules', reason: 'already up to date' });
+      continue;
+    }
+
+    if (backup && before) {
+      backupFile(resolved, before);
+    }
+
     writeFileSync(resolved, source, 'utf8');
-    results.push({ target: resolved, status: before ? 'synced' : 'created' });
+    results.push({ target: resolved, status: before ? 'synced' : 'created', kind: 'rules' });
   }
 
   return results;
 }
 
+export function syncSkills(sourceDir: string, targets: string[], options: SyncOptions = {}): SyncResult[] {
+  const { dryRun = false, backup = true } = options;
+  const resolvedSource = resolvePath(sourceDir);
+  if (!resolvedSource || !existsSync(resolvedSource)) {
+    return targets.map((target) => ({ target: expandHome(target), status: 'skipped', kind: 'skills', reason: 'source skills not found' }));
+  }
+
+  const results: SyncResult[] = [];
+
+  for (const target of targets) {
+    const resolvedTarget = expandHome(target);
+    mkdirSync(resolvedTarget, { recursive: true });
+
+    if (dryRun) {
+      results.push({ target: resolvedTarget, status: 'dry-run', kind: 'skills', reason: 'would sync directory' });
+      continue;
+    }
+
+    if (backup && existsSync(resolvedTarget)) {
+      backupDir(resolvedTarget);
+    }
+
+    cpSync(resolvedSource, resolvedTarget, { recursive: true, force: true });
+    results.push({ target: resolvedTarget, status: 'synced', kind: 'skills' });
+  }
+
+  return results;
+}
+
+function loadConfig(configPath?: string): { config: AigsConfig; configPathUsed?: string } {
+  const explicitPath = configPath ? resolvePath(configPath) : undefined;
+  const defaultPath = resolvePath('aigs.config.json');
+  const selected = explicitPath ?? (defaultPath && existsSync(defaultPath) ? defaultPath : undefined);
+
+  if (selected && existsSync(selected)) {
+    const content = readFileSync(selected, 'utf8');
+    const parsed = JSON.parse(content) as AigsConfig;
+    return { config: parsed, configPathUsed: selected };
+  }
+
+  return { config: {} };
+}
+
+function parseArgs(argv: string[]) {
+  let sourceRules: string | undefined;
+  let configPath: string | undefined;
+  let dryRun = false;
+
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    if (arg === '--config' && argv[i + 1]) {
+      configPath = argv[i + 1];
+      i++;
+      continue;
+    }
+    if (arg === '--dry-run') {
+      dryRun = true;
+      continue;
+    }
+    if (!arg.startsWith('-') && !sourceRules) {
+      sourceRules = arg;
+    }
+  }
+
+  return { sourceRules, configPath, dryRun };
+}
+
 export function runCli(argv = process.argv.slice(2)) {
-  const [sourceFile = 'global.md'] = argv;
-  const result = syncContent(sourceFile, tools.map((tool) => tool.configPath));
-  console.log(JSON.stringify({ sourceFile, results: result }, null, 2));
-  return result;
+  const { sourceRules: sourceRulesArg, configPath, dryRun } = parseArgs(argv);
+  const { config, configPathUsed } = loadConfig(configPath);
+
+  const sourceFile = resolvePath(sourceRulesArg ?? config.sourceRules ?? 'global.md')!;
+  const sourceSkills = config.sourceSkills;
+  const toolList = config.tools && config.tools.length ? config.tools : tools;
+
+  const resultsRules = syncContent(sourceFile, toolList.map((tool) => tool.configPath), { dryRun, backup: true });
+  const skillTargets = toolList.filter((t) => t.skillPath).map((t) => t.skillPath!) as string[];
+  const skillResults = sourceSkills && skillTargets.length > 0 ? syncSkills(sourceSkills, skillTargets, { dryRun, backup: true }) : [];
+
+  const payload = {
+    sourceRules: sourceFile,
+    sourceSkills,
+    configPath: configPathUsed,
+    options: { dryRun, backup: true },
+    results: { rules: resultsRules, skills: skillResults }
+  };
+
+  console.log(JSON.stringify(payload, null, 2));
+  return payload;
 }
 
 const entryFile = process.argv[1];
