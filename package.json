@@ -5,7 +5,7 @@
   "description": "Local-first AI tool rules and Skills synchronizer.",
   "type": "module",
   "bin": {
-    "ai-global-sync": "dist/index.js"
+    "ai-global-sync": "dist/src/index.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",

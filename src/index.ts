@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 export type ToolConfig = {
   name: string;
@@ -59,6 +60,10 @@ export function runCli(argv = process.argv.slice(2)) {
   return result;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
-  runCli();
+const entryFile = process.argv[1];
+if (entryFile) {
+  const entryUrl = pathToFileURL(entryFile).href;
+  if (import.meta.url === entryUrl) {
+    runCli();
+  }
 }
